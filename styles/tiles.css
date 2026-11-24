@@ -1,0 +1,748 @@
+/* hyalineOS Phone Viewport — OS 1 (4 Metro x Frutiger Aero styles) & OS 2 (4 Deep OS styles)
+ * Follows modern-web-guidance:
+ * - size-aware-styling (container-type: inline-size + @container queries on .metro-tile)
+ * - group-element-transitions (view-transition-class: live-tile)
+ */
+
+/* Wallpaper Presets */
+.phone-screen[data-wallpaper="aurora-sky"] {
+  --os1-wallpaper:
+    radial-gradient(circle at 82% 16%, rgba(255, 255, 255, 0.52) 0%, transparent 34%),
+    radial-gradient(circle at 18% 78%, rgba(72, 239, 194, 0.55) 0%, transparent 48%),
+    linear-gradient(155deg, #6ee7ff 0%, #1ea6e8 46%, #0b5ea8 100%);
+}
+
+.phone-screen[data-wallpaper="aqua-bokeh"] {
+  --os1-wallpaper:
+    radial-gradient(circle at 22% 24%, rgba(255, 255, 255, 0.48) 0%, transparent 22%),
+    radial-gradient(circle at 76% 42%, rgba(167, 243, 208, 0.46) 0%, transparent 28%),
+    radial-gradient(circle at 38% 82%, rgba(56, 189, 248, 0.58) 0%, transparent 34%),
+    linear-gradient(160deg, #38ef7d 0%, #11998e 48%, #0f4c75 100%);
+}
+
+.phone-screen[data-wallpaper="emerald-meadow"] {
+  --os1-wallpaper:
+    radial-gradient(circle at 75% 18%, rgba(254, 249, 195, 0.6) 0%, transparent 32%),
+    linear-gradient(175deg, #38bdf8 0%, #67e8f9 44%, #34d399 76%, #059669 100%);
+}
+
+.phone-screen[data-wallpaper="sunset-prism"] {
+  --os1-wallpaper:
+    radial-gradient(circle at 80% 15%, rgba(255, 247, 205, 0.55) 0%, transparent 35%),
+    linear-gradient(160deg, #38bdf8 0%, #818cf8 48%, #f472b6 88%, #fb923c 100%);
+}
+
+.phone-screen[data-wallpaper="midnight-glass"] {
+  --os1-wallpaper:
+    radial-gradient(circle at 25% 20%, rgba(56, 189, 248, 0.35) 0%, transparent 45%),
+    radial-gradient(circle at 85% 75%, rgba(16, 185, 129, 0.28) 0%, transparent 45%),
+    linear-gradient(165deg, #0c243b 0%, #0a1929 55%, #050d17 100%);
+}
+
+/* OS 1 Layout Shell */
+.os1-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0.45rem 0.72rem 0.75rem;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.os1-body::-webkit-scrollbar {
+  display: none;
+}
+
+.os1-topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.15rem 0.25rem 0.65rem;
+}
+
+.os1-clock-trigger {
+  background: none;
+  border: none;
+  padding: 0.15rem 0.25rem;
+  margin: -0.15rem -0.25rem;
+  border-radius: 10px;
+  color: #ffffff;
+  font: inherit;
+  font-size: 1.95rem;
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  cursor: pointer;
+  text-shadow: 0 2px 10px rgba(0, 30, 65, 0.25);
+}
+
+.os1-clock-trigger:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.os1-drawer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.3rem 0.62rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Metro + Aero Gadgets Row (visible in metro-aero-gadgets preset) */
+.aero-gadgets-strip {
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.48rem;
+  margin-bottom: 0.55rem;
+}
+
+.phone-screen[data-os1-style="metro-aero-gadgets"] .aero-gadgets-strip {
+  display: grid;
+}
+
+.aero-gadget {
+  position: relative;
+  padding: 0.55rem 0.65rem;
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.18) 52%, rgba(255, 255, 255, 0.28) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(var(--os1-glass-blur));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 6px 16px rgba(0, 35, 70, 0.16);
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 26, 52, 0.36);
+}
+
+.aero-gadget-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.86;
+}
+
+.aero-gadget-val {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* Metro 4-Column Tile Grid */
+.metro-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 74px;
+  grid-auto-flow: dense;
+  gap: 8px;
+}
+
+/* Size-Aware Live Tile (container-type: inline-size + view-transition-class) */
+.metro-tile {
+  position: relative;
+  container-type: inline-size;
+  view-transition-class: live-tile;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: var(--os1-tile-radius);
+  padding: 0.52rem;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  --tile-bg: var(--os1-accent);
+}
+
+.metro-tile:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.82);
+}
+
+.metro-tile:active {
+  transform: scale(0.96);
+}
+
+.metro-tile.is-selected {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.22);
+}
+
+.metro-tile[data-size="1x1"] {
+  grid-column: span 1;
+  grid-row: span 1;
+}
+
+.metro-tile[data-size="2x2"] {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.metro-tile[data-size="4x2"] {
+  grid-column: span 4;
+  grid-row: span 2;
+}
+
+/* 4 Distinct OS 1 Visual Styles */
+
+/* 1. Aero-Glass Metro (Frosted Glass + Top Specular Gloss) */
+.phone-screen[data-os1-style="aero-glass-metro"] .metro-tile {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.04) 44%, rgba(0, 0, 0, 0.06) 100%),
+    color-mix(in srgb, var(--tile-bg) calc(var(--os1-glass-opacity) * 100%), transparent);
+  backdrop-filter: blur(var(--os1-glass-blur)) saturate(145%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 6px 18px rgba(0, 28, 56, 0.18);
+}
+
+/* 2. Glossy Neo-Metro (Vibrant Liquid Color Blocks + Specular Curve) */
+.phone-screen[data-os1-style="glossy-neo-metro"] .metro-tile {
+  background:
+    radial-gradient(ellipse 110% 65% at 50% 0%, rgba(255, 255, 255, 0.48) 0%, rgba(255, 255, 255, 0.08) 54%, transparent 56%),
+    linear-gradient(155deg, color-mix(in oklch, var(--tile-bg) 88%, white) 0%, var(--tile-bg) 52%, color-mix(in oklch, var(--tile-bg) 78%, black) 100%);
+  border-color: rgba(255, 255, 255, 0.56);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.78),
+    0 8px 20px rgba(0, 22, 48, 0.25);
+}
+
+/* 3. Minimal Frosted Aero (Airy Ultra-Lite Glass) */
+.phone-screen[data-os1-style="minimal-frosted-aero"] .metro-tile {
+  background: rgba(255, 255, 255, calc(var(--os1-glass-opacity) * 0.42));
+  border-color: rgba(255, 255, 255, 0.32);
+  backdrop-filter: blur(calc(var(--os1-glass-blur) * 0.7));
+  box-shadow: none;
+  color: #ffffff;
+  text-shadow: 0 1px 4px rgba(0, 20, 42, 0.3);
+}
+
+/* 4. Metro + Aero Gadgets & Dock */
+.phone-screen[data-os1-style="metro-aero-gadgets"] .metro-tile {
+  background:
+    linear-gradient(175deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.08) 46%, rgba(0, 0, 0, 0.08) 100%),
+    color-mix(in srgb, var(--tile-bg) calc(var(--os1-glass-opacity) * 90%), transparent);
+  backdrop-filter: blur(var(--os1-glass-blur)) saturate(160%);
+  border-radius: calc(var(--os1-tile-radius) + 4px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    0 8px 18px rgba(0, 32, 66, 0.2);
+}
+
+/* Tile Internal Elements — Adapted purely via @container queries! */
+.tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.tile-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.tile-badge {
+  font-size: 0.64rem;
+  font-weight: 700;
+  padding: 0.1rem 0.36rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.24);
+  color: #ffffff;
+}
+
+.tile-live-body {
+  display: none;
+  flex-direction: column;
+  gap: 0.16rem;
+}
+
+.tile-live-headline {
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.tile-live-sub {
+  font-size: 0.7rem;
+  opacity: 0.86;
+  line-height: 1.25;
+}
+
+.tile-wide-extra {
+  display: none;
+}
+
+.tile-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+}
+
+.tile-label {
+  font-size: 0.67rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Safe fallback for browsers without container queries */
+@supports not (container-type: inline-size) {
+  .metro-tile[data-size="2x2"] .tile-live-body,
+  .metro-tile[data-size="4x2"] .tile-live-body {
+    display: flex;
+  }
+  .metro-tile[data-size="4x2"] .tile-wide-extra {
+    display: flex;
+  }
+}
+
+/* @container query: 1x1 compact tile (< 115px wide) */
+@container (max-width: 114px) {
+  .tile-head {
+    justify-content: center;
+    margin-top: 0.2rem;
+  }
+  .tile-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 0.58rem;
+  }
+  .tile-label {
+    font-size: 0.62rem;
+    text-align: center;
+    width: 100%;
+  }
+}
+
+/* @container query: 2x2 medium live tile (115px–235px wide) */
+@container (min-width: 115px) {
+  .tile-live-body {
+    display: flex;
+  }
+  .tile-icon {
+    font-size: 1.5rem;
+  }
+  .tile-label {
+    font-size: 0.74rem;
+  }
+}
+
+/* @container query: 4x2 wide live tile (>= 236px wide) */
+@container (min-width: 236px) {
+  .tile-wide-extra {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.72rem;
+    opacity: 0.92;
+  }
+  .tile-live-headline {
+    font-size: 1.05rem;
+  }
+}
+
+/* Bottom Glass Dock (visible in metro-aero-gadgets preset + visible door button when enabled) */
+.os1-dock {
+  position: relative;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  padding: 0.5rem 0.72rem 0.65rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.1));
+  backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.dock-chip {
+  flex: 1;
+  padding: 0.4rem 0.45rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+}
+
+.dock-chip:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* WP8 A-Z App Drawer Overlay inside Phone */
+.az-drawer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0.4rem 0.85rem 0.8rem;
+  overflow-y: auto;
+  gap: 0.5rem;
+}
+
+.az-jump-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.26rem;
+}
+
+.az-letter-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.az-letter-btn.active {
+  background: #ffffff;
+  color: #0b4f82;
+}
+
+.az-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.az-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.az-row-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.24);
+  font-size: 0.95rem;
+}
+
+.az-row-sub {
+  margin-left: auto;
+  font-size: 0.65rem;
+  opacity: 0.8;
+}
+
+/* =====================================================
+ * OS 2 — DEEP PRIVILEGED OS (4 Styles + 2 Engine Modes)
+ * ===================================================== */
+.os2-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* OS 2 Style Variations */
+.phone-screen[data-os2-style="smoked-aero-desktop"] {
+  --os2-wallpaper:
+    radial-gradient(circle at 75% 15%, rgba(56, 189, 248, 0.28), transparent 45%),
+    linear-gradient(165deg, #0d263d 0%, #071422 52%, #030910 100%);
+}
+
+.phone-screen[data-os2-style="stealth-obsidian-vault"] {
+  --os2-wallpaper: linear-gradient(180deg, #0a0c10 0%, #050608 100%);
+}
+
+.phone-screen[data-os2-style="chameleon-persona-spaces"] {
+  --os2-wallpaper:
+    radial-gradient(circle at 20% 25%, rgba(168, 85, 247, 0.34), transparent 48%),
+    linear-gradient(160deg, #1b1035 0%, #0c1328 58%, #050814 100%);
+}
+
+.phone-screen[data-os2-style="metro-aero-pro"] {
+  --os2-wallpaper:
+    radial-gradient(circle at 80% 20%, rgba(14, 165, 233, 0.36), transparent 46%),
+    linear-gradient(160deg, #0b2447 0%, #08152b 60%, #040914 100%);
+}
+
+.os2-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.78rem;
+  gap: 0.45rem;
+  border-bottom: 1px solid rgba(125, 211, 252, 0.16);
+  background: rgba(6, 16, 28, 0.55);
+  backdrop-filter: blur(12px);
+}
+
+.os2-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #bae6fd;
+}
+
+.os2-workspace {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  padding: 0.65rem 0.72rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.os2-persona-strip {
+  display: flex;
+  gap: 0.32rem;
+  flex-wrap: wrap;
+}
+
+.persona-pill {
+  padding: 0.25rem 0.56rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.55);
+  color: #cbd5e1;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.persona-pill.active {
+  border-color: var(--os2-accent);
+  background: color-mix(in oklch, var(--os2-accent) 24%, transparent);
+  color: #f0f9ff;
+}
+
+/* OS 2 Engine Mode A: App Freezing & Hiding List */
+.freezer-card {
+  padding: 0.62rem 0.7rem;
+  border-radius: 13px;
+  background: rgba(12, 26, 42, var(--os2-glass-opacity));
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  backdrop-filter: blur(14px);
+}
+
+.freezer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  font-size: 0.75rem;
+}
+
+.freezer-row:last-child {
+  border-bottom: none;
+}
+
+.freeze-btn {
+  padding: 0.2rem 0.5rem;
+  border-radius: 7px;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.16);
+  color: #e0f2fe;
+  font: inherit;
+  font-size: 0.66rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.freeze-btn.frozen {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.16);
+  color: #fde68a;
+}
+
+/* OS 2 Engine Mode B: Freeform Floating Windows */
+.freeform-stage {
+  position: relative;
+  flex: 1;
+  min-height: 290px;
+  border-radius: 14px;
+  border: 1px dashed rgba(125, 211, 252, 0.22);
+  background: rgba(4, 12, 22, 0.35);
+  overflow: hidden;
+}
+
+.aero-window {
+  position: absolute;
+  width: 220px;
+  border-radius: 12px;
+  background: rgba(11, 27, 44, 0.84);
+  border: 1px solid rgba(125, 211, 252, 0.42);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  overflow: hidden;
+}
+
+.aero-win-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.34rem 0.52rem;
+  background: linear-gradient(180deg, rgba(125, 211, 252, 0.26), rgba(14, 116, 144, 0.12));
+  border-bottom: 1px solid rgba(125, 211, 252, 0.2);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: grab;
+  user-select: none;
+}
+
+.aero-win-bar:active {
+  cursor: grabbing;
+}
+
+.aero-win-body {
+  padding: 0.52rem;
+  font-size: 0.69rem;
+  color: #dbeafe;
+  font-family: var(--font-mono);
+  line-height: 1.38;
+}
+
+/* Shell Log Strip inside OS 2 */
+.shell-log {
+  padding: 0.52rem 0.62rem;
+  border-radius: 10px;
+  background: rgba(2, 8, 16, 0.78);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: #7dd3fc;
+  line-height: 1.4;
+}
+
+/* OS 2 Smoked Aero Taskbar */
+.os2-taskbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.46rem 0.65rem 0.62rem;
+  background: linear-gradient(180deg, rgba(16, 39, 64, 0.78), rgba(5, 14, 24, 0.92));
+  border-top: 1px solid rgba(125, 211, 252, 0.28);
+  backdrop-filter: blur(18px);
+}
+
+.start-orb-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(186, 230, 253, 0.75);
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.9), transparent 46%),
+    linear-gradient(160deg, #38bdf8, #0369a1);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.taskbar-pill {
+  padding: 0.3rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid rgba(125, 211, 252, 0.26);
+  background: rgba(56, 189, 248, 0.12);
+  color: #e0f2fe;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* In-Phone Micro-App Sheet */
+.micro-app-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(4, 18, 34, 0.42);
+  backdrop-filter: blur(22px);
+  overflow-y: auto;
+}
+
+.micro-app-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  padding-bottom: 0.45rem;
+}
+
+.micro-note-input {
+  width: 100%;
+  min-height: 110px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.6rem;
+  resize: vertical;
+}
+
+/* Strict Gate Screen inside Phone */
+.strict-gate-box {
+  margin: auto 0.65rem;
+  padding: 1.1rem;
+  border-radius: 16px;
+  background: rgba(8, 20, 34, 0.85);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.strict-gate-box h3 {
+  margin: 0;
+  font-size: 0.96rem;
+  color: #fde68a;
+}
+
+.strict-gate-box p {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #cbd5e1;
+}

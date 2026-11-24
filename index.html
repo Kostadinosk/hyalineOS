@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>hyalineOS — Interactive Dual-OS Demo &amp; Theme Studio</title>
+    <meta
+      name="description"
+      content="Test-drive hyalineOS: an Android Dual-OS suite pairing a Windows Metro × Frutiger Aero Lite Launcher (OS 1) with a Root/Shizuku Deep OS (OS 2). Customize and export hyalineos-config.json."
+    />
+    <link rel="stylesheet" href="./styles/tokens.css" />
+    <link rel="stylesheet" href="./styles/studio.css" />
+    <link rel="stylesheet" href="./styles/tiles.css" />
+  </head>
+  <body>
+    <header class="studio-header">
+      <div class="brand-cluster">
+        <div class="aero-orb" aria-hidden="true"></div>
+        <div>
+          <h1 class="brand-title">
+            hyalineOS
+            <span class="brand-pill">Demo &amp; Theme Studio</span>
+          </h1>
+          <p class="brand-sub">
+            Native Android Dual-OS Suite &bull; OS 1 Metro &times; Frutiger Aero Lite + OS 2 Root/Shizuku Deep OS
+          </p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button type="button" class="btn btn-primary" commandfor="oobe-dialog" command="show-modal">
+          &#10024; First-Boot Setup (OOBE)
+        </button>
+        <button type="button" class="btn" id="open-config-btn" commandfor="config-dialog" command="show-modal">
+          &#128229; Export / Import JSON
+        </button>
+        <button type="button" class="btn btn-ghost" commandfor="door-help-popover" command="toggle-popover">
+          &#128273; OS 2 Door Guide
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm" id="toggle-studio-theme-btn" aria-pressed="false">
+          &#9728;&#65039; Studio Theme
+        </button>
+      </div>
+    </header>
+
+    <main class="studio-main">
+      <!-- LEFT COLUMN: Live Interactive Mobile Phone Simulator -->
+      <section class="phone-stage" aria-label="Interactive hyalineOS Phone Simulator">
+        <div class="os-switch-bar" role="group" aria-label="Active OS Environment">
+          <button type="button" class="os-tab" id="tab-os1" aria-pressed="true">
+            <span class="status-dot active-os1" aria-hidden="true"></span>
+            OS 1: Surface Lite
+          </button>
+          <button type="button" class="os-tab is-os2" id="tab-os2" aria-pressed="false">
+            <span class="status-dot active-os2" id="os2-dot" aria-hidden="true"></span>
+            OS 2: Deep OS
+          </button>
+        </div>
+
+        <div class="phone-bezel">
+          <div
+            class="phone-screen os1-surface"
+            id="phone-screen"
+            data-os1-style="aero-glass-metro"
+            data-os2-style="smoked-aero-desktop"
+            data-wallpaper="aurora-sky"
+            tabindex="-1"
+            aria-live="polite"
+          >
+            <!-- Dynamically rendered OS 1 / OS 2 / Guest / Drawer / Micro-App screen -->
+          </div>
+        </div>
+
+        <div class="phone-hint-strip" id="phone-hint-strip">
+          <span>Click any tile to edit size/color &bull; Double-click to open micro-app &bull; Click the clock to open the OS 2 Door (PIN <code>1337</code>, Decoy <code>0000</code>)</span>
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN: Theme Studio & Dual-OS Configuration Panels -->
+      <div class="studio-panels">
+        <!-- Panel 1: OS 1 Metro x Frutiger Aero Style Picker -->
+        <section class="studio-card" aria-labelledby="os1-styles-heading">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title" id="os1-styles-heading">OS 1 — Metro &times; Frutiger Aero Lite Styles</h2>
+              <p class="card-desc">Zero root required. Chosen during First-Boot OOBE and switchable anytime.</p>
+            </div>
+            <span class="brand-pill">No-Root Launcher</span>
+          </div>
+          <div class="preset-grid" id="os1-preset-grid" role="group" aria-label="OS 1 visual presets"></div>
+        </section>
+
+        <!-- Panel 2: Aero Glass & Tile Live Customizer -->
+        <section class="studio-card" aria-labelledby="glass-controls-heading">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title" id="glass-controls-heading">Aero Glass, Accent Tint &amp; Tile Studio</h2>
+              <p class="card-desc">
+                Uses CSS <code>contrast-color()</code> &amp; <code>@container</code> size-aware tiles. Export straight to Android.
+              </p>
+            </div>
+            <div class="seg-group">
+              <button type="button" class="btn btn-sm" id="add-tile-btn">+ Add Tile</button>
+              <button type="button" class="btn btn-sm btn-ghost" id="reset-config-btn">Reset Defaults</button>
+            </div>
+          </div>
+
+          <div class="controls-grid">
+            <div class="control-group">
+              <span class="control-label">
+                <span>OS 1 Accent Tint</span>
+                <span class="control-val" id="val-accent">#00a8e8</span>
+              </span>
+              <div class="swatch-row" id="accent-swatches"></div>
+            </div>
+
+            <div class="control-group">
+              <label class="control-label" for="range-opacity">
+                <span>Glass Tint Opacity</span>
+                <span class="control-val" id="val-opacity">44%</span>
+              </label>
+              <input id="range-opacity" type="range" min="18" max="90" value="44" />
+            </div>
+
+            <div class="control-group">
+              <label class="control-label" for="range-blur">
+                <span>Aero Backdrop Blur</span>
+                <span class="control-val" id="val-blur">18px</span>
+              </label>
+              <input id="range-blur" type="range" min="4" max="32" value="18" />
+            </div>
+
+            <div class="control-group">
+              <label class="control-label" for="range-radius">
+                <span>Tile Corner Radius</span>
+                <span class="control-val" id="val-radius">10px</span>
+              </label>
+              <input id="range-radius" type="range" min="0" max="22" value="10" />
+            </div>
+
+            <div class="control-group" style="grid-column: 1 / -1;">
+              <span class="control-label">
+                <span>Wallpaper Preset</span>
+                <span class="control-val" id="val-wallpaper">aurora-sky</span>
+              </span>
+              <div class="seg-group" id="wallpaper-pills" role="group" aria-label="Wallpaper presets"></div>
+            </div>
+          </div>
+
+          <div class="tile-inspector" id="tile-inspector" style="margin-top: 1rem;">
+            <!-- Selected tile size (1x1, 2x2, 4x2), color, open micro-app, remove -->
+          </div>
+        </section>
+
+        <!-- Panel 3: OS 2 Root/Shizuku Deep OS Configuration -->
+        <section class="studio-card" aria-labelledby="os2-config-heading">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title" id="os2-config-heading">OS 2 — Deep OS (Strict Root / Shizuku Gate)</h2>
+              <p class="card-desc">
+                Strictly locked &amp; hidden until Root or Shizuku is granted. Zero non-privileged fallback.
+              </p>
+            </div>
+            <div class="seg-group" id="priv-sim-group" role="group" aria-label="Simulate device privilege level"></div>
+          </div>
+
+          <div class="preset-grid" id="os2-preset-grid" role="group" aria-label="OS 2 visual presets"></div>
+
+          <div class="controls-grid" style="margin-top: 1rem;">
+            <div class="control-group">
+              <span class="control-label">OS 2 Primary Engine Mode</span>
+              <div class="seg-group" id="engine-mode-group" role="group" aria-label="OS 2 Engine Mode">
+                <button type="button" class="seg-btn" data-engine="app-freezing" aria-pressed="true">
+                  &#10052;&#65039; App Freezing &amp; Hiding
+                </button>
+                <button type="button" class="seg-btn" data-engine="freeform-windows" aria-pressed="false">
+                  &#129695; Freeform Floating Windows
+                </button>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <span class="control-label">Configurable Door Trigger</span>
+              <div class="seg-group" id="door-trigger-group" role="group" aria-label="OS 2 Door trigger">
+                <button type="button" class="seg-btn" data-door="long-press-clock" aria-pressed="true">
+                  Clock Tap / Hold
+                </button>
+                <button type="button" class="seg-btn" data-door="visible-dock-pill" aria-pressed="false">
+                  Visible Dock Switcher
+                </button>
+                <button type="button" class="seg-btn" data-door="secret-drawer-code" aria-pressed="false">
+                  A&ndash;Z Secret Code
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 4: Bundled Suite & Standalone APKs Map -->
+        <section class="studio-card" aria-labelledby="suite-heading">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title" id="suite-heading">hyalineOS Modular Android Suite</h2>
+              <p class="card-desc">Bundled native tools + your PulseMesh module + theme-synced standalone Phone &amp; SMS APKs.</p>
+            </div>
+          </div>
+          <div class="suite-grid">
+            <article class="suite-item">
+              <div class="suite-item-head">
+                <span>&#128222; hyaline Phone</span>
+                <span class="suite-tag apk">Standalone APK</span>
+              </div>
+              <p>Default Android <code>ROLE_DIALER</code> Telco app styled in Metro &times; Frutiger Aero; pushes missed-call Live Tiles.</p>
+            </article>
+            <article class="suite-item">
+              <div class="suite-item-head">
+                <span>&#128172; hyaline Messages</span>
+                <span class="suite-tag apk">Standalone APK</span>
+              </div>
+              <p>Default Android <code>ROLE_SMS</code> messaging app with OTP auto-copy &amp; unread SMS Live Tile feed.</p>
+            </article>
+            <article class="suite-item">
+              <div class="suite-item-head">
+                <span>&#128225; PulseMesh</span>
+                <span class="suite-tag">Bundled Module</span>
+              </div>
+              <p>Dedicated <code>:feature-pulsemesh</code> integration slot for your existing PulseMesh project with shared glass tokens.</p>
+            </article>
+            <article class="suite-item">
+              <div class="suite-item-head">
+                <span>&#128221; OS 1 Essentials &amp; Pocket Tools</span>
+                <span class="suite-tag">No Root</span>
+              </div>
+              <p>Notes (Live Tile), Clock/Focus, Calc/Converter, Weather/Pulse, Dual-Mode Files, QR Scanner, Voice Memo &amp; Clips.</p>
+            </article>
+            <article class="suite-item">
+              <div class="suite-item-head">
+                <span>&#128274; OS 2 Privacy &amp; Power Suite</span>
+                <span class="suite-tag priv">Root / Shizuku</span>
+              </div>
+              <p>AES-256 Vault, Ephemeral Browser, Interactive Shizuku/Root Terminal, App Freezer, APK/Cache Cleaner &amp; DPI Monitor.</p>
+            </article>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Declarative Popover: OS 2 Configurable Door & Demo PIN Guide -->
+    <div id="door-help-popover" class="hyaline-popover" popover>
+      <h3>OS 2 Door &amp; Demo PINs</h3>
+      <p>
+        Test the <strong>Configurable Door + Smart Lock</strong> directly inside the phone simulator:
+      </p>
+      <p>
+        &bull; Enter <code>1337</code> to unlock <strong>OS 2 Deep OS</strong> (requires simulated Root or Shizuku ON).<br />
+        &bull; Enter <code>0000</code> to enter the harmless <strong>Decoy Guest Space</strong>.<br />
+        &bull; Set privilege simulation to <strong>None (Locked)</strong> to see the strict privilege gate in action.
+      </p>
+      <button type="button" class="btn btn-sm btn-primary" commandfor="door-help-popover" command="hide-popover">
+        Got it
+      </button>
+    </div>
+
+    <!-- Modal Dialog 1: First-Boot OOBE Setup Wizard -->
+    <dialog id="oobe-dialog" class="hyaline-dialog" closedby="any" aria-labelledby="oobe-title">
+      <div class="dialog-inner">
+        <div class="dialog-header">
+          <div>
+            <h2 id="oobe-title">hyalineOS — First-Boot Setup</h2>
+            <p class="card-desc" id="oobe-subtitle">Step 1 of 4 &bull; Choose your OS 1 Metro &times; Frutiger Aero style</p>
+          </div>
+          <button type="button" class="btn btn-sm btn-ghost" commandfor="oobe-dialog" command="close" aria-label="Close setup">
+            &#10005;
+          </button>
+        </div>
+
+        <div class="oobe-step-pills" id="oobe-pills" aria-hidden="true">
+          <span class="oobe-pill done"></span>
+          <span class="oobe-pill"></span>
+          <span class="oobe-pill"></span>
+          <span class="oobe-pill"></span>
+        </div>
+
+        <div id="oobe-body"></div>
+
+        <div class="dialog-footer">
+          <button type="button" class="btn btn-ghost" id="oobe-prev-btn">Back</button>
+          <button type="button" class="btn btn-primary" id="oobe-next-btn">Next Step &rarr;</button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Modal Dialog 2: OS 2 Configurable Door PIN / Decoy Lock -->
+    <dialog id="door-dialog" class="hyaline-dialog" closedby="any" aria-labelledby="door-title">
+      <div class="dialog-inner">
+        <div class="dialog-header">
+          <div>
+            <h2 id="door-title">OS 2 Smart Lock Door</h2>
+            <p class="card-desc">PIN <code>1337</code> = OS 2 Deep OS &bull; PIN <code>0000</code> = Decoy Guest Space</p>
+          </div>
+          <button type="button" class="btn btn-sm btn-ghost" commandfor="door-dialog" command="close" aria-label="Close lock dialog">
+            &#10005;
+          </button>
+        </div>
+
+        <div id="door-status-msg" class="notice-banner" hidden></div>
+
+        <div class="pin-display" id="pin-display" aria-label="Entered PIN digits">
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+        </div>
+
+        <div class="pin-pad" id="pin-pad" role="group" aria-label="PIN Keypad">
+          <button type="button" class="pin-key" data-digit="1">1</button>
+          <button type="button" class="pin-key" data-digit="2">2</button>
+          <button type="button" class="pin-key" data-digit="3">3</button>
+          <button type="button" class="pin-key" data-digit="4">4</button>
+          <button type="button" class="pin-key" data-digit="5">5</button>
+          <button type="button" class="pin-key" data-digit="6">6</button>
+          <button type="button" class="pin-key" data-digit="7">7</button>
+          <button type="button" class="pin-key" data-digit="8">8</button>
+          <button type="button" class="pin-key" data-digit="9">9</button>
+          <button type="button" class="pin-key" data-action="clear">CLR</button>
+          <button type="button" class="pin-key" data-digit="0">0</button>
+          <button type="button" class="pin-key" data-action="bio" title="Simulate Biometric">&#128275;</button>
+        </div>
+
+        <div class="dialog-footer">
+          <button type="button" class="btn btn-sm btn-ghost" id="quick-pin-os2">Fill 1337 (OS 2)</button>
+          <button type="button" class="btn btn-sm btn-ghost" id="quick-pin-decoy">Fill 0000 (Decoy)</button>
+          <button type="button" class="btn btn-sm" commandfor="door-dialog" command="close">Cancel</button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Modal Dialog 3: Export / Import hyalineos-config.json -->
+    <dialog id="config-dialog" class="hyaline-dialog" closedby="any" aria-labelledby="config-title">
+      <div class="dialog-inner">
+        <div class="dialog-header">
+          <div>
+            <h2 id="config-title">Portable hyalineos-config.json</h2>
+            <p class="card-desc">Import this file directly into the native Android hyalineOS app or paste a config below.</p>
+          </div>
+          <button type="button" class="btn btn-sm btn-ghost" commandfor="config-dialog" command="close" aria-label="Close config dialog">
+            &#10005;
+          </button>
+        </div>
+
+        <textarea id="config-json-textarea" class="json-box" spellcheck="false" aria-label="hyalineOS JSON configuration"></textarea>
+        <div id="config-feedback" class="notice-banner ok" hidden></div>
+
+        <div class="dialog-footer">
+          <button type="button" class="btn btn-sm" id="copy-json-btn">Copy JSON</button>
+          <button type="button" class="btn btn-sm" id="download-json-btn">Download .json</button>
+          <button type="button" class="btn btn-sm btn-primary" id="apply-json-btn">Apply Pasted JSON</button>
+          <button type="button" class="btn btn-sm btn-ghost" commandfor="config-dialog" command="close">Close</button>
+        </div>
+      </div>
+    </dialog>
+
+    <script type="module" src="./scripts/app.js"></script>
+  </body>
+</html>

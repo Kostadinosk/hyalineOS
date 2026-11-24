@@ -1,0 +1,137 @@
+/* hyalineOS Studio — Design Tokens & Color Schemes
+ * Follows modern-web-guidance:
+ * - component-specific-light-dark-theme (no @property <color> on tokens; re-specified inherited colors)
+ * - contrast-color (contrast-color() + CIE XYZ D65 relative color WCAG luminance fallback)
+ */
+
+:root {
+  /* Page-level studio tokens (never registered as @property <color> so light-dark() stays live) */
+  --studio-bg-light: #e9f4fb;
+  --studio-bg-dark: #07121d;
+  --studio-surface-light: rgba(255, 255, 255, 0.78);
+  --studio-surface-dark: rgba(12, 26, 40, 0.78);
+  --studio-surface-strong-light: #ffffff;
+  --studio-surface-strong-dark: #0e1f30;
+  --studio-border-light: rgba(15, 76, 117, 0.16);
+  --studio-border-dark: rgba(125, 211, 252, 0.18);
+  --studio-text-light: #0a2236;
+  --studio-text-dark: #edf7ff;
+  --studio-muted-light: #47657d;
+  --studio-muted-dark: #93b4cc;
+  --studio-accent-light: #0077b6;
+  --studio-accent-dark: #38bdf8;
+
+  --studio-bg: var(--studio-bg-light);
+  --studio-surface: var(--studio-surface-light);
+  --studio-surface-strong: var(--studio-surface-strong-light);
+  --studio-border: var(--studio-border-light);
+  --studio-text: var(--studio-text-light);
+  --studio-muted: var(--studio-muted-light);
+  --studio-accent: var(--studio-accent-light);
+
+  /* Fallback for browsers without light-dark() */
+  @media (prefers-color-scheme: dark) {
+    --studio-bg: var(--studio-bg-dark);
+    --studio-surface: var(--studio-surface-dark);
+    --studio-surface-strong: var(--studio-surface-strong-dark);
+    --studio-border: var(--studio-border-dark);
+    --studio-text: var(--studio-text-dark);
+    --studio-muted: var(--studio-muted-dark);
+    --studio-accent: var(--studio-accent-dark);
+  }
+
+  /* Modern light-dark() resolution */
+  @supports (color: light-dark(white, black)) {
+    --studio-bg: light-dark(var(--studio-bg-light), var(--studio-bg-dark));
+    --studio-surface: light-dark(var(--studio-surface-light), var(--studio-surface-dark));
+    --studio-surface-strong: light-dark(var(--studio-surface-strong-light), var(--studio-surface-strong-dark));
+    --studio-border: light-dark(var(--studio-border-light), var(--studio-border-dark));
+    --studio-text: light-dark(var(--studio-text-light), var(--studio-text-dark));
+    --studio-muted: light-dark(var(--studio-muted-light), var(--studio-muted-dark));
+    --studio-accent: light-dark(var(--studio-accent-light), var(--studio-accent-dark));
+  }
+
+  color-scheme: light dark;
+  accent-color: var(--studio-accent);
+  color: var(--studio-text);
+
+  /* Dynamic hyalineOS Simulator Tokens (mutated by Studio controls) */
+  --os1-accent: #00a8e8;
+  --os1-glass-opacity: 0.44;
+  --os1-glass-blur: 18px;
+  --os1-tile-radius: 10px;
+  --os2-accent: #38bdf8;
+  --os2-glass-opacity: 0.62;
+
+  /* Typography */
+  --font-metro: "Segoe UI", "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, monospace;
+
+  /* Disable root view transition so tile/panel group transitions don't block studio controls */
+  view-transition-name: none;
+}
+
+/* Explicit studio theme overrides if user toggles studio chrome */
+:root[data-studio-theme="light"] {
+  color-scheme: light;
+  --studio-bg: var(--studio-bg-light);
+  --studio-surface: var(--studio-surface-light);
+  --studio-surface-strong: var(--studio-surface-strong-light);
+  --studio-border: var(--studio-border-light);
+  --studio-text: var(--studio-text-light);
+  --studio-muted: var(--studio-muted-light);
+  --studio-accent: var(--studio-accent-light);
+}
+
+:root[data-studio-theme="dark"] {
+  color-scheme: dark;
+  --studio-bg: var(--studio-bg-dark);
+  --studio-surface: var(--studio-surface-dark);
+  --studio-surface-strong: var(--studio-surface-strong-dark);
+  --studio-border: var(--studio-border-dark);
+  --studio-text: var(--studio-text-dark);
+  --studio-muted: var(--studio-muted-dark);
+  --studio-accent: var(--studio-accent-dark);
+}
+
+/* Component-specific color-scheme for OS 1 Surface Lite (always luminous Frutiger Aero) */
+.os1-surface {
+  color-scheme: only light;
+  background: var(--os1-wallpaper, linear-gradient(155deg, #7be0ff 0%, #2eb5e5 44%, #0f6ca8 100%));
+  /* Mandatory re-specification of inherited <color> properties on color-scheme override */
+  color: #ffffff;
+  accent-color: var(--os1-accent);
+}
+
+/* Component-specific color-scheme for OS 2 Deep OS (always smoked dark glass) */
+.os2-surface {
+  color-scheme: only dark;
+  background: var(--os2-wallpaper, radial-gradient(circle at 20% 15%, #11324d 0%, #07131f 55%, #03070d 100%));
+  /* Mandatory re-specification of inherited <color> properties on color-scheme override */
+  color: #f0f9ff;
+  accent-color: var(--os2-accent);
+}
+
+/* Dynamic readable foreground utility using contrast-color() + CIE XYZ D65 fallback */
+.dynamic-contrast-fg {
+  --tile-bg: var(--os1-accent);
+  /* Base legacy fallback */
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+}
+
+@supports (color: color(from red xyz-d65 1 1 1)) {
+  .dynamic-contrast-fg {
+    --wcag-y-threshold: 0.17913;
+    --y: max(0, sign(var(--wcag-y-threshold) - y));
+    color: color(from var(--tile-bg) xyz-d65 calc(var(--y) * 0.9505) var(--y) calc(var(--y) * 1.089));
+    text-shadow: none;
+  }
+}
+
+@supports (color: contrast-color(red)) {
+  .dynamic-contrast-fg {
+    color: contrast-color(var(--tile-bg));
+    text-shadow: none;
+  }
+}
