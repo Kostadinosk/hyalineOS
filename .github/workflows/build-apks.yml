@@ -1,0 +1,87 @@
+name: Build hyalineOS APKs & Publish Release
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'app-launcher/**'
+      - 'app-phone/**'
+      - 'app-messages/**'
+      - 'core-theme/**'
+      - 'core-privilege/**'
+      - 'gradle/**'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - '.github/workflows/build-apks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apks:
+    name: Build hyalineOS Suite APKs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout hyalineOS
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Android SDK & accept licenses
+        uses: android-actions/setup-android@v3
+
+      - name: Accept SDK licenses & install API 36.1 + build-tools 36.0.0
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-36.1" "build-tools;36.0.0"
+
+      - name: Grant Gradle wrapper execute permission
+        run: chmod +x gradlew
+
+      - name: Build Debug APKs (Launcher, Phone, Messages)
+        run: |
+          ./gradlew :app-launcher:assembleDebug :app-phone:assembleDebug :app-messages:assembleDebug --no-daemon
+
+      - name: Collect & rename APKs + generate SHA-256 checksums
+        run: |
+          mkdir -p dist-apks
+          cp app-launcher/build/outputs/apk/debug/app-launcher-debug.apk dist-apks/hyalineOS-launcher-debug.apk
+          cp app-phone/build/outputs/apk/debug/app-phone-debug.apk dist-apks/hyalinePhone-debug.apk
+          cp app-messages/build/outputs/apk/debug/app-messages-debug.apk dist-apks/hyalineMessages-debug.apk
+          (cd dist-apks && sha256sum *.apk > SHA256SUMS.txt)
+          ls -lh dist-apks
+
+      - name: Upload APK build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hyalineOS-apks
+          path: dist-apks/*
+
+      - name: Publish / update pre-release with APKs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v0.1.0-alpha"
+          NOTES="## hyalineOS Suite (v0.1.0-alpha)
+
+          Built automatically on GitHub Actions:
+          - **hyalineOS-launcher-debug.apk** (`os.hyaline.launcher`) — OS 1 Metro × Frutiger Aero Lite Launcher + OS 2 Root/Shizuku Deep OS
+          - **hyalinePhone-debug.apk** (`os.hyaline.phone`) — Standalone Theme-Synced Telco Dialer (`ROLE_DIALER`)
+          - **hyalineMessages-debug.apk** (`os.hyaline.messages`) — Standalone Theme-Synced SMS App (`ROLE_SMS`)
+          - **Pre-included PulseMesh**: Download the latest official release APK from https://github.com/Kostadinosk/PulseMesh/releases/latest
+          - **Theme Studio**: https://kostadinosk.github.io/hyalineOS/"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist-apks/* --clobber
+          else
+            gh release create "$TAG" dist-apks/* \
+              --title "hyalineOS v0.1.0-alpha (Suite APKs)" \
+              --notes "$NOTES" \
+              --prerelease
+          fi
