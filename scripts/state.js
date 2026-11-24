@@ -164,15 +164,15 @@ export function createDefaultConfig() {
         {
           id: 'pulsemesh',
           label: 'PulseMesh',
-          packageName: 'os.hyaline.feature.pulsemesh',
+          packageName: 'com.KostadinosK.pulsemesh',
           icon: '📡',
           size: '4x2',
           accentOverride: '#7c3aed',
-          liveHeadline: 'PulseMesh Bundled Module',
-          liveSub: 'Ready to wire your existing PulseMesh project',
-          wideExtra: 'Live Tile status • Shared hyalineOS glass tokens',
+          liveHeadline: 'PulseMesh (Pre-included)',
+          liveSub: 'Off-grid E2EE mesh chat & voice • BLE / Wi-Fi Direct / AFSK',
+          wideExtra: 'com.KostadinosK.pulsemesh • Offline GPS maps',
           badge: 'MESH',
-          category: 'Bundled Feature Module',
+          category: 'Pre-included App',
         },
         {
           id: 'notes',
@@ -261,7 +261,7 @@ export const OS2_FREEZER_APPS = [
   { id: 'terminal', name: 'hyaline Shell Terminal', pkg: 'os.hyaline.os2.shell', frozenInOs1: true },
   { id: 'browser', name: 'Ephemeral Browser', pkg: 'os.hyaline.os2.web', frozenInOs1: true },
   { id: 'work-mail', name: 'Work Mail & Slack', pkg: 'com.work.suite', frozenInOs1: true },
-  { id: 'pulsemesh-priv', name: 'PulseMesh (Deep Node)', pkg: 'os.hyaline.feature.pulsemesh', frozenInOs1: false },
+  { id: 'pulsemesh-priv', name: 'PulseMesh (Pre-included)', pkg: 'com.KostadinosK.pulsemesh', frozenInOs1: false },
 ];
 
 const STORAGE_KEY = 'hyalineos_studio_config_v1';

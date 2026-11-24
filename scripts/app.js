@@ -379,9 +379,9 @@ function renderMicroApp() {
   } else if (tile.id === 'pulsemesh') {
     bodyContent = `
       <div class="freezer-card" style="background: rgba(124,58,237,0.32); border-color: rgba(216,180,254,0.45);">
-        <strong>PulseMesh Integration Slot</strong>
+        <strong>Pre-included App: PulseMesh</strong>
         <p style="font-size:0.75rem; margin: 0.4rem 0 0;">
-          Dedicated <code>:feature-pulsemesh</code> Gradle module ready to bundle your existing PulseMesh project with shared hyalineOS glass styling &amp; Live Tile updates.
+          Ships pre-included as <code>com.KostadinosK.pulsemesh</code> — off-grid E2EE mesh messenger &amp; full-duplex voice (BLE 0xCAFE/0xCAFF, Wi-Fi Direct, Acoustic AFSK &amp; offline GPS maps).
         </p>
       </div>
     `;
