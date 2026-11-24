@@ -33,13 +33,11 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Setup Android SDK & accept licenses
-        uses: android-actions/setup-android@v3
-
       - name: Accept SDK licenses & install API 36.1 + build-tools 36.0.0
         run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-36.1" "build-tools;36.0.0"
+          SDKMGR="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMGR" --licenses >/dev/null || true
+          "$SDKMGR" "platforms;android-36.1" "build-tools;36.0.0"
 
       - name: Grant Gradle wrapper execute permission
         run: chmod +x gradlew
