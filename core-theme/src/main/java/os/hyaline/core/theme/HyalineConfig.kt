@@ -103,7 +103,7 @@ data class Os1Config(
     val glassBlurPx: Int = 18,
     val wallpaperPreset: String = "aurora-sky",
     val tileRadiusPx: Int = 10,
-    val tiles: List<TileConfig> = defaultTiles(),
+    val tiles: List<TileConfig> = HyalineConfig.defaultTiles(),
 )
 
 @Serializable
