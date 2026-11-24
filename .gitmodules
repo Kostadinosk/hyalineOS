@@ -1,0 +1,3 @@
+[submodule "preincluded/PulseMesh"]
+	path = preincluded/PulseMesh
+	url = https://github.com/Kostadinosk/PulseMesh.git

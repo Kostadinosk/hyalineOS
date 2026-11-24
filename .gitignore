@@ -1,2 +1,12 @@
 .DS_Store
 Thumbs.db
+.gradle/
+**/build/
+local.properties
+.idea/
+*.iml
+*.hprof
+captures/
+.cxx/
+*.jks
+*.keystore
