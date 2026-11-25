@@ -25,6 +25,7 @@ fun contrastingForeground(background: Color): Color =
     if (background.luminance() > 0.38f) Color(0xFF071A2B) else Color.White
 
 fun os1WallpaperBrush(preset: String): Brush = when (preset) {
+    "system-wallpaper" -> Brush.verticalGradient(listOf(Color(0x22000000), Color(0x44000000)))
     "aqua-bokeh" -> Brush.linearGradient(listOf(Color(0xFF38EF7D), Color(0xFF11998E), Color(0xFF0F4C75)))
     "emerald-meadow" -> Brush.verticalGradient(listOf(Color(0xFF38BDF8), Color(0xFF34D399), Color(0xFF059669)))
     "sunset-prism" -> Brush.linearGradient(listOf(Color(0xFF38BDF8), Color(0xFF818CF8), Color(0xFFF472B6)))

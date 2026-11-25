@@ -46,12 +46,15 @@ jobs:
         run: |
           ./gradlew :app-launcher:assembleDebug :app-phone:assembleDebug :app-messages:assembleDebug --no-daemon
 
-      - name: Collect & rename APKs + generate SHA-256 checksums
+      - name: Collect APKs, bundle pre-included PulseMesh APK & generate SHA-256 checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p dist-apks
           cp app-launcher/build/outputs/apk/debug/app-launcher-debug.apk dist-apks/hyalineOS-launcher-debug.apk
           cp app-phone/build/outputs/apk/debug/app-phone-debug.apk dist-apks/hyalinePhone-debug.apk
           cp app-messages/build/outputs/apk/debug/app-messages-debug.apk dist-apks/hyalineMessages-debug.apk
+          gh release download -R Kostadinosk/PulseMesh --pattern "*.apk" -D dist-apks || true
           (cd dist-apks && sha256sum *.apk > SHA256SUMS.txt)
           ls -lh dist-apks
 
@@ -61,27 +64,31 @@ jobs:
           name: hyalineOS-apks
           path: dist-apks/*
 
-      - name: Publish / update pre-release with APKs
+      - name: Publish / update Release with full APK suite
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v0.1.0-alpha"
+          TAG="v0.2.0"
           cat <<'EOF' > release-notes.md
-          ## hyalineOS Suite (v0.1.0-alpha)
+          ## hyalineOS v0.2.0 — Full Functional Dual-OS Launcher, Phone, Messages & Pre-Included PulseMesh
 
-          Built automatically on GitHub Actions:
-          - **hyalineOS-launcher-debug.apk** (`os.hyaline.launcher`) — OS 1 Metro × Frutiger Aero Lite Launcher + OS 2 Root/Shizuku Deep OS
-          - **hyalinePhone-debug.apk** (`os.hyaline.phone`) — Standalone Theme-Synced Telco Dialer (`ROLE_DIALER`)
-          - **hyalineMessages-debug.apk** (`os.hyaline.messages`) — Standalone Theme-Synced SMS App (`ROLE_SMS`)
-          - **Pre-included PulseMesh**: Download the latest official release APK from https://github.com/Kostadinosk/PulseMesh/releases/latest
-          - **Live Demo & Theme Studio**: https://kostadinosk.github.io/hyalineOS/
+          ### Included APKs
+          - **`hyalineOS-launcher-debug.apk` (`os.hyaline.launcher`)** — Full daily-driver Android Home Launcher:
+            - Discovers **all installed Android apps** with real vector/adaptive app icons & live install/uninstall tracking
+            - **OS 1 Surface Lite**: 4 Metro × Frutiger Aero styles, resizable `1×1` / `2×2` / `4×2` Live Tiles (long-press any tile to resize, tint, reorder, or unpin), swipe-down notification shade, Android System Wallpaper passthrough, and persistent layout/OOBE storage
+            - **Classic WP8 Swipe-Left A–Z App Drawer**: Instant search, alphabetical section headers, 4×7 Fast-Jump Letter Grid, Pin to Start, App Info, and Uninstall
+            - **7 Working Built-In Apps**: `hyaline Notes`, `Clock & Stopwatch & Focus Timer`, `Calculator & Converter`, `System & Battery Pulse`, `Dual-Mode File Explorer`, `Quick Tools & Flashlight`, and `OS Studio` (Default Launcher role, Live Tile notification listener, JSON import/export)
+            - **OS 2 Deep OS** (strictly gated on Shizuku or Root): PIN + Biometric Smart Lock, Decoy Guest PIN, real Shizuku/Root **App Freezer**, **Freeform Floating Windows**, **Interactive Shell Terminal**, and **Private Vault Pad**
+          - **`hyalinePhone-debug.apk` (`os.hyaline.phone`)** — Full standalone `ROLE_DIALER` Telco app with `TelecomManager` calling, Call Log, Contacts search, and `InCallService` + Aero In-Call UI (Answer, Decline, Mute, Speaker, Hold, DTMF Keypad)
+          - **`hyalineMessages-debug.apk` (`os.hyaline.messages`)** — Full standalone `ROLE_SMS` app with `Telephony.Sms` conversation threads, multipart `SmsManager` sending, `SmsDeliverReceiver` inbox persistence + notifications + Live Tile updates, and 1-tap OTP copy
+          - **Pre-included `PulseMesh` (`com.KostadinosK.pulsemesh`)** — Bundled directly alongside the hyalineOS APKs
           EOF
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" dist-apks/* --clobber
+            gh release edit "$TAG" --title "hyalineOS v0.2.0 (Full Functional Suite APKs)" --notes-file release-notes.md
           else
             gh release create "$TAG" dist-apks/* \
-              --title "hyalineOS v0.1.0-alpha (Suite APKs)" \
-              --notes-file release-notes.md \
-              --prerelease
+              --title "hyalineOS v0.2.0 (Full Functional Suite APKs)" \
+              --notes-file release-notes.md
           fi

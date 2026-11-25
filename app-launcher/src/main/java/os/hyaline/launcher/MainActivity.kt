@@ -4,390 +4,399 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Color as AndroidColor
+import android.graphics.drawable.ColorDrawable
+import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import android.provider.Settings
+import android.view.WindowManager
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.launch
 import os.hyaline.core.privilege.Os2EngineController
 import os.hyaline.core.privilege.PrivilegeGate
 import os.hyaline.core.privilege.PrivilegeStatus
 import os.hyaline.core.theme.*
+import rikka.shizuku.Shizuku
 
-private enum class ActiveScreen { OOBE, OS1, OS2, DECOY_GUEST }
+private enum class RootRoute {
+    OOBE,
+    OS1_HOME,
+    INTERNAL_TOOL,
+    OS2_DEEP,
+    DECOY_GUEST,
+}
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
-    private var screenOffCallback: (() -> Unit)? = null
+    private lateinit var prefs: HyalinePreferences
+    private lateinit var repo: LauncherRepository
+
+    private var onHomeIntentCallback: (() -> Unit)? = null
+    private var onScreenOffCallback: (() -> Unit)? = null
+    private var onPackageChangedCallback: ((String?) -> Unit)? = null
+    private var onCustomTileBroadcastCallback: ((LiveTileUpdate) -> Unit)? = null
+    private var onShizukuChangedCallback: (() -> Unit)? = null
 
     private val screenOffReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_SCREEN_OFF) {
-                screenOffCallback?.invoke()
+                onScreenOffCallback?.invoke()
             }
         }
     }
 
+    private val packageChangeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val pkg = intent?.data?.schemeSpecificPart
+            onPackageChangedCallback?.invoke(pkg)
+        }
+    }
+
+    private val liveTileBroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != HyalinePackages.ACTION_LIVE_TILE_UPDATE) return
+            val pkg = intent.getStringExtra(HyalinePackages.EXTRA_TILE_PACKAGE) ?: return
+            val headline = intent.getStringExtra(HyalinePackages.EXTRA_TILE_HEADLINE).orEmpty()
+            val subtext = intent.getStringExtra(HyalinePackages.EXTRA_TILE_SUBTEXT).orEmpty()
+            val badge = intent.getIntExtra(HyalinePackages.EXTRA_TILE_BADGE, 0)
+            onCustomTileBroadcastCallback?.invoke(LiveTileUpdate(pkg, headline, subtext, badge))
+        }
+    }
+
+    private val shizukuPermissionListener = Shizuku.OnRequestPermissionResultListener { _, _ ->
+        onShizukuChangedCallback?.invoke()
+    }
+
+    @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        prefs = HyalinePreferences(this)
+        repo = LauncherRepository(this)
+
         registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
+        registerReceiver(
+            packageChangeReceiver,
+            IntentFilter().apply {
+                addAction(Intent.ACTION_PACKAGE_ADDED)
+                addAction(Intent.ACTION_PACKAGE_REMOVED)
+                addAction(Intent.ACTION_PACKAGE_REPLACED)
+                addAction(Intent.ACTION_PACKAGE_CHANGED)
+                addDataScheme("package")
+            },
+        )
+        ContextCompat.registerReceiver(
+            this,
+            liveTileBroadcastReceiver,
+            IntentFilter(HyalinePackages.ACTION_LIVE_TILE_UPDATE),
+            ContextCompat.RECEIVER_EXPORTED,
+        )
+        runCatching { Shizuku.addRequestPermissionResultListener(shizukuPermissionListener) }
 
         setContent {
-            var config by remember { mutableStateOf(HyalineConfig()) }
-            var activeScreen by remember { mutableStateOf(ActiveScreen.OOBE) }
-            var privStatus by remember { mutableStateOf(PrivilegeGate.probe()) }
-            val liveTiles by LiveTileNotificationService.liveTiles.collectAsState()
-            val engine = remember { Os2EngineController() }
             val scope = rememberCoroutineScope()
-            val context = LocalContext.current
+            val engine = remember { Os2EngineController() }
 
-            // Auto-return to OS 1 when screen turns off
-            DisposableEffect(config.os2.autoLockOnScreenOff) {
-                screenOffCallback = {
-                    if (config.os2.autoLockOnScreenOff && activeScreen == ActiveScreen.OS2) {
-                        activeScreen = ActiveScreen.OS1
-                    }
-                }
-                onDispose { screenOffCallback = null }
+            var config by remember { mutableStateOf(prefs.loadConfig()) }
+            var route by remember {
+                mutableStateOf(if (prefs.isOobeCompleted) RootRoute.OS1_HOME else RootRoute.OOBE)
+            }
+            var activeToolUri by remember { mutableStateOf(HyalinePackages.INTERNAL_SETTINGS) }
+            var showOs2DoorDialog by remember { mutableStateOf(false) }
+
+            var os2Pin by remember { mutableStateOf(prefs.os2Pin) }
+            var decoyPin by remember { mutableStateOf(prefs.decoyPin) }
+            var notes by remember { mutableStateOf(prefs.loadNotes()) }
+            var vaultNotes by remember { mutableStateOf(prefs.loadVaultNotes()) }
+            var clips by remember { mutableStateOf(prefs.loadClips()) }
+
+            var allApps by remember { mutableStateOf<List<InstalledAppInfo>>(emptyList()) }
+            var privStatus by remember { mutableStateOf(PrivilegeGate.probe()) }
+            var customTileMap by remember { mutableStateOf<Map<String, LiveTileUpdate>>(emptyMap()) }
+            val notifTiles by LiveTileNotificationService.liveTiles.collectAsState()
+
+            val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
+
+            fun updateAndSaveConfig(next: HyalineConfig) {
+                config = next
+                prefs.saveConfig(next)
             }
 
-            // Import hyalineos-config.json exported from https://kostadinosk.github.io/hyalineos/
+            // Toggle system wallpaper flag dynamically when "system-wallpaper" preset is chosen
+            LaunchedEffect(config.os1.wallpaperPreset, route) {
+                val wantSysWallpaper = route == RootRoute.OS1_HOME && config.os1.wallpaperPreset == "system-wallpaper"
+                if (wantSysWallpaper) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
+                    window.setBackgroundDrawable(ColorDrawable(AndroidColor.TRANSPARENT))
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
+                }
+            }
+
+            // Discover all installed Android apps & auto-populate smart initial Start tiles on very first run
+            LaunchedEffect(Unit) {
+                val loadedApps = repo.loadAllApps()
+                allApps = loadedApps
+                if (!prefs.hasSavedConfig()) {
+                    val smartTiles = repo.buildSmartInitialTiles(loadedApps)
+                    updateAndSaveConfig(config.copy(os1 = config.os1.copy(tiles = smartTiles)))
+                }
+            }
+
+            // Wire lifecycle / broadcast callbacks
+            DisposableEffect(config.os2.autoLockOnScreenOff) {
+                onScreenOffCallback = {
+                    if (config.os2.autoLockOnScreenOff && route == RootRoute.OS2_DEEP) {
+                        route = RootRoute.OS1_HOME
+                    }
+                }
+                onHomeIntentCallback = {
+                    showOs2DoorDialog = false
+                    if (route == RootRoute.INTERNAL_TOOL || route == RootRoute.DECOY_GUEST) {
+                        route = RootRoute.OS1_HOME
+                    }
+                    if (route == RootRoute.OS1_HOME) {
+                        scope.launch { pagerState.animateScrollToPage(0) }
+                    }
+                }
+                onPackageChangedCallback = { pkg ->
+                    repo.clearIconCache(pkg)
+                    scope.launch { allApps = repo.loadAllApps() }
+                }
+                onCustomTileBroadcastCallback = { update ->
+                    customTileMap = customTileMap + (update.packageName to update)
+                }
+                onShizukuChangedCallback = {
+                    privStatus = PrivilegeGate.probe()
+                }
+                onDispose {
+                    onScreenOffCallback = null
+                    onHomeIntentCallback = null
+                    onPackageChangedCallback = null
+                    onCustomTileBroadcastCallback = null
+                    onShizukuChangedCallback = null
+                }
+            }
+
+            // Import & Export hyalineos-config.json launchers
             val importLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.OpenDocument(),
             ) { uri ->
                 if (uri != null) {
-                    context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { reader ->
-                        HyalineConfig.fromJson(reader.readText()).onSuccess { loaded ->
-                            config = loaded
+                    contentResolver.openInputStream(uri)?.bufferedReader()?.use { reader ->
+                        HyalineConfig.fromJson(reader.readText()).onSuccess { imported ->
+                            updateAndSaveConfig(imported)
                         }
                     }
                 }
             }
 
+            val exportLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.CreateDocument("application/json"),
+            ) { uri ->
+                if (uri != null) {
+                    contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { writer ->
+                        writer.write(HyalineConfig.toJson(config))
+                    }
+                }
+            }
+
+            val isNotificationListenerEnabled = remember(route) {
+                val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners").orEmpty()
+                flat.contains(packageName)
+            }
+
             HyalineTheme(
-                darkOs2 = activeScreen == ActiveScreen.OS2,
-                accentHex = if (activeScreen == ActiveScreen.OS2) config.os2.accentHex else config.os1.accentHex,
+                darkOs2 = route == RootRoute.OS2_DEEP,
+                accentHex = if (route == RootRoute.OS2_DEEP) config.os2.accentHex else config.os1.accentHex,
             ) {
-                when (activeScreen) {
-                    ActiveScreen.OOBE -> FirstBootOobeScreen(
+                when (route) {
+                    RootRoute.OOBE -> FirstBootOobeWizard(
                         config = config,
                         privilegeStatus = privStatus,
-                        onUpdateConfig = { config = it },
+                        os2Pin = os2Pin,
+                        decoyPin = decoyPin,
+                        onUpdateConfig = ::updateAndSaveConfig,
+                        onUpdatePins = { p2, dec ->
+                            os2Pin = p2
+                            decoyPin = dec
+                            prefs.os2Pin = p2
+                            prefs.decoyPin = dec
+                        },
                         onReprobePrivilege = {
                             PrivilegeGate.requestShizukuPermission()
                             privStatus = PrivilegeGate.probe()
                         },
-                        onImportJson = { importLauncher.launch(arrayOf("application/json")) },
-                        onFinish = { activeScreen = ActiveScreen.OS1 },
-                    )
-
-                    ActiveScreen.OS1 -> Os1SurfaceLiteScreen(
-                        config = config,
-                        liveTiles = liveTiles,
-                        onLaunchPackage = { pkg ->
-                            context.packageManager.getLaunchIntentForPackage(pkg)?.let {
-                                context.startActivity(it)
-                            }
-                        },
-                        onOpenOobe = { activeScreen = ActiveScreen.OOBE },
-                        onEnterOs2 = {
-                            privStatus = PrivilegeGate.probe()
-                            // Strict privilege gate: OS 2 opens ONLY when Root or Shizuku is granted
-                            if (privStatus != PrivilegeStatus.NONE) {
-                                activeScreen = ActiveScreen.OS2
-                            }
+                        onImportJson = { importLauncher.launch(arrayOf("application/json", "*/*")) },
+                        onFinish = {
+                            prefs.isOobeCompleted = true
+                            prefs.saveConfig(config)
+                            route = RootRoute.OS1_HOME
                         },
                     )
 
-                    ActiveScreen.OS2 -> Os2DeepSpaceScreen(
+                    RootRoute.OS1_HOME -> Os1LauncherPager(
+                        pagerState = pagerState,
                         config = config,
+                        allApps = allApps,
+                        liveTiles = notifTiles,
+                        customLiveTiles = customTileMap,
+                        notes = notes,
+                        repo = repo,
                         privilegeStatus = privStatus,
-                        onToggleFreeze = { pkg, freeze ->
-                            scope.launch { engine.setPackageFrozen(pkg, freeze) }
-                        },
-                        onLaunchFreeform = { pkg ->
-                            scope.launch {
-                                engine.enableFreeformWindowing()
-                                engine.launchInFreeformWindow(context, pkg)
+                        secretPinCode = os2Pin,
+                        onUpdateConfig = ::updateAndSaveConfig,
+                        onLaunchTarget = { pkgOrUri ->
+                            repo.launchApp(pkgOrUri) { internalUri ->
+                                activeToolUri = internalUri
+                                route = RootRoute.INTERNAL_TOOL
                             }
                         },
-                        onLockToOs1 = { activeScreen = ActiveScreen.OS1 },
+                        onTriggerOs2Door = {
+                            privStatus = PrivilegeGate.probe()
+                            showOs2DoorDialog = true
+                        },
+                        onOpenSettings = {
+                            activeToolUri = HyalinePackages.INTERNAL_SETTINGS
+                            route = RootRoute.INTERNAL_TOOL
+                        },
                     )
 
-                    ActiveScreen.DECOY_GUEST -> Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(os1WallpaperBrush("aurora-sky"))
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Guest Mode", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Light)
-                            Spacer(Modifier.height(12.dp))
-                            Button(onClick = { activeScreen = ActiveScreen.OS1 }) {
-                                Text("Return to OS 1")
+                    RootRoute.INTERNAL_TOOL -> {
+                        BackHandler { route = RootRoute.OS1_HOME }
+                        HyalineInternalToolRouter(
+                            toolUri = activeToolUri,
+                            config = config,
+                            notes = notes,
+                            clips = clips,
+                            repo = repo,
+                            privilegeStatus = privStatus,
+                            engine = engine,
+                            isNotificationListenerActive = isNotificationListenerEnabled,
+                            onUpdateConfig = ::updateAndSaveConfig,
+                            onUpdateNotes = { updated ->
+                                notes = updated
+                                prefs.saveNotes(updated)
+                            },
+                            onUpdateClips = { updated ->
+                                clips = updated
+                                prefs.saveClips(updated)
+                            },
+                            onImportJson = { importLauncher.launch(arrayOf("application/json", "*/*")) },
+                            onExportJson = { exportLauncher.launch("hyalineos-config.json") },
+                            onResetDefaultTiles = {
+                                val smart = repo.buildSmartInitialTiles(allApps)
+                                updateAndSaveConfig(config.copy(os1 = config.os1.copy(tiles = smart)))
+                            },
+                            onOpenOobe = { route = RootRoute.OOBE },
+                            onBack = { route = RootRoute.OS1_HOME },
+                        )
+                    }
+
+                    RootRoute.OS2_DEEP -> {
+                        BackHandler { route = RootRoute.OS1_HOME }
+                        Os2DeepWorkspaceScreen(
+                            config = config,
+                            privilegeStatus = privStatus,
+                            allApps = allApps,
+                            engine = engine,
+                            vaultNotes = vaultNotes,
+                            onUpdateConfig = ::updateAndSaveConfig,
+                            onUpdateVaultNotes = { txt ->
+                                vaultNotes = txt
+                                prefs.saveVaultNotes(txt)
+                            },
+                            onLaunchNormal = { pkg -> repo.launchApp(pkg) {} },
+                            onLockToOs1 = { route = RootRoute.OS1_HOME },
+                        )
+                    }
+
+                    RootRoute.DECOY_GUEST -> {
+                        BackHandler { route = RootRoute.OS1_HOME }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(os1WallpaperBrush("aurora-sky"))
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text("Guest Space", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Light)
+                                Text(
+                                    "Clean restricted profile active.",
+                                    color = Color.White.copy(alpha = 0.8f),
+                                    fontSize = 13.sp,
+                                )
+                                Button(onClick = { route = RootRoute.OS1_HOME }) {
+                                    Text("Exit Guest Space")
+                                }
                             }
                         }
                     }
                 }
+
+                if (showOs2DoorDialog) {
+                    Os2SmartLockDialog(
+                        activity = this@MainActivity,
+                        privilegeStatus = privStatus,
+                        expectedOs2Pin = os2Pin,
+                        expectedDecoyPin = decoyPin,
+                        decoyEnabled = config.os2.decoyPinEnabled,
+                        onUnlockOs2 = {
+                            showOs2DoorDialog = false
+                            privStatus = PrivilegeGate.probe()
+                            if (privStatus != PrivilegeStatus.NONE) {
+                                route = RootRoute.OS2_DEEP
+                            }
+                        },
+                        onUnlockDecoy = {
+                            showOs2DoorDialog = false
+                            route = RootRoute.DECOY_GUEST
+                        },
+                        onReprobePrivilege = {
+                            PrivilegeGate.requestShizukuPermission()
+                            privStatus = PrivilegeGate.probe()
+                        },
+                        onDismiss = { showOs2DoorDialog = false },
+                    )
+                }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.hasCategory(Intent.CATEGORY_HOME) || intent.action == Intent.ACTION_MAIN) {
+            onHomeIntentCallback?.invoke()
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterReceiver(screenOffReceiver)
-    }
-}
-
-@Composable
-private fun FirstBootOobeScreen(
-    config: HyalineConfig,
-    privilegeStatus: PrivilegeStatus,
-    onUpdateConfig: (HyalineConfig) -> Unit,
-    onReprobePrivilege: () -> Unit,
-    onImportJson: () -> Unit,
-    onFinish: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(os1WallpaperBrush(config.os1.wallpaperPreset))
-            .statusBarsPadding()
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Text("hyalineOS Setup", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Light)
-        Text(
-            "Choose your OS 1 Metro × Frutiger Aero style and optionally unlock OS 2 with Root or Shizuku.",
-            color = Color.White.copy(alpha = 0.88f),
-            fontSize = 14.sp,
-        )
-
-        Os1Style.entries.forEach { style ->
-            val selected = config.os1.style == style
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = if (selected) Color.White.copy(alpha = 0.32f) else Color.White.copy(alpha = 0.14f),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onUpdateConfig(config.copy(os1 = config.os1.copy(style = style))) },
-            ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(style.displayName, color = Color.White, fontWeight = FontWeight.SemiBold)
-                    if (selected) Text("Selected", color = Color.White, fontSize = 12.sp)
-                }
-            }
-        }
-
-        Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = Color(0xCC071828),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    "OS 2 Privilege Gate: ${privilegeStatus.name}",
-                    color = Color(0xFF7DD3FC),
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    if (privilegeStatus == PrivilegeStatus.NONE) {
-                        "Strict Gate: OS 2 stays completely locked & hidden until Root or Shizuku is granted."
-                    } else {
-                        "Unlocked via ${privilegeStatus.name}. Engine: ${config.os2.engineMode.displayName}."
-                    },
-                    color = Color.White.copy(alpha = 0.85f),
-                    fontSize = 12.sp,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onReprobePrivilege) {
-                        Text("Check Shizuku / Root", color = Color.White)
-                    }
-                    OutlinedButton(onClick = onImportJson) {
-                        Text("Import Web JSON", color = Color.White)
-                    }
-                }
-            }
-        }
-
-        Spacer(Modifier.weight(1f))
-        Button(
-            onClick = onFinish,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Launch hyalineOS")
-        }
-    }
-}
-
-@Composable
-private fun Os1SurfaceLiteScreen(
-    config: HyalineConfig,
-    liveTiles: Map<String, LiveTileUpdate>,
-    onLaunchPackage: (String) -> Unit,
-    onOpenOobe: () -> Unit,
-    onEnterOs2: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(os1WallpaperBrush(config.os1.wallpaperPreset))
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "hyalineOS",
-                color = Color.White,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Light,
-                modifier = Modifier.clickable(onClick = onEnterOs2),
-            )
-            TextButton(onClick = onOpenOobe) {
-                Text("Setup / Styles", color = Color.White)
-            }
-        }
-
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.weight(1f),
-        ) {
-            items(
-                items = config.os1.tiles,
-                key = { it.id },
-                span = { GridItemSpan(it.size.cols) },
-            ) { tile ->
-                val tint = parseHexColor(tile.accentOverride ?: config.os1.accentHex)
-                val fg = if (config.os1.style == Os1Style.MINIMAL_FROSTED_AERO) Color.White else contrastingForeground(tint)
-                val live = liveTiles[tile.packageName]
-                val heightDp = if (tile.size == TileSize.SMALL) 82.dp else 156.dp
-
-                Box(
-                    modifier = Modifier
-                        .height(heightDp)
-                        .hyalineGlassTile(
-                            style = config.os1.style,
-                            tint = tint,
-                            glassOpacity = config.os1.glassOpacity,
-                            cornerRadiusDp = config.os1.tileRadiusPx,
-                        )
-                        .clickable { onLaunchPackage(tile.packageName) }
-                        .padding(10.dp),
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Text(tile.icon, fontSize = 22.sp)
-                            if (live != null && live.count > 0) {
-                                Text("${live.count}", color = fg, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            }
-                        }
-                        if (tile.size != TileSize.SMALL && live != null) {
-                            Text(
-                                text = live.text.ifBlank { live.title },
-                                color = fg.copy(alpha = 0.9f),
-                                fontSize = 12.sp,
-                                maxLines = 2,
-                            )
-                        }
-                        Text(tile.label, color = fg, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun Os2DeepSpaceScreen(
-    config: HyalineConfig,
-    privilegeStatus: PrivilegeStatus,
-    onToggleFreeze: (String, Boolean) -> Unit,
-    onLaunchFreeform: (String) -> Unit,
-    onLockToOs1: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(os2WallpaperBrush(config.os2.style))
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column {
-                Text("OS 2 • ${config.os2.style.displayName}", color = Color(0xFFBAE6FD), fontWeight = FontWeight.Bold)
-                Text(
-                    "Backend: ${privilegeStatus.name} • Mode: ${config.os2.engineMode.displayName}",
-                    color = Color(0xFF94A3B8),
-                    fontSize = 12.sp,
-                )
-            }
-            Button(onClick = onLockToOs1) {
-                Text("Lock → OS 1")
-            }
-        }
-
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = Color(0xAA0C1D30),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Pre-included PulseMesh (Deep Node)", color = Color.White, fontWeight = FontWeight.SemiBold)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { onLaunchFreeform(HyalinePackages.PULSEMESH) }) {
-                        Text("Open in Freeform Window")
-                    }
-                    OutlinedButton(onClick = { onToggleFreeze(HyalinePackages.PULSEMESH, true) }) {
-                        Text("Freeze in OS 1", color = Color(0xFFBAE6FD))
-                    }
-                }
-            }
-        }
+        runCatching { unregisterReceiver(screenOffReceiver) }
+        runCatching { unregisterReceiver(packageChangeReceiver) }
+        runCatching { unregisterReceiver(liveTileBroadcastReceiver) }
+        runCatching { Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener) }
     }
 }
