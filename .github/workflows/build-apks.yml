@@ -66,20 +66,22 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="v0.1.0-alpha"
-          NOTES="## hyalineOS Suite (v0.1.0-alpha)
+          cat <<'EOF' > release-notes.md
+          ## hyalineOS Suite (v0.1.0-alpha)
 
           Built automatically on GitHub Actions:
           - **hyalineOS-launcher-debug.apk** (`os.hyaline.launcher`) — OS 1 Metro × Frutiger Aero Lite Launcher + OS 2 Root/Shizuku Deep OS
           - **hyalinePhone-debug.apk** (`os.hyaline.phone`) — Standalone Theme-Synced Telco Dialer (`ROLE_DIALER`)
           - **hyalineMessages-debug.apk** (`os.hyaline.messages`) — Standalone Theme-Synced SMS App (`ROLE_SMS`)
           - **Pre-included PulseMesh**: Download the latest official release APK from https://github.com/Kostadinosk/PulseMesh/releases/latest
-          - **Theme Studio**: https://kostadinosk.github.io/hyalineOS/"
+          - **Live Demo & Theme Studio**: https://kostadinosk.github.io/hyalineOS/
+          EOF
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" dist-apks/* --clobber
           else
             gh release create "$TAG" dist-apks/* \
               --title "hyalineOS v0.1.0-alpha (Suite APKs)" \
-              --notes "$NOTES" \
+              --notes-file release-notes.md \
               --prerelease
           fi
