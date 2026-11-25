@@ -87,6 +87,7 @@ object CallSessionStore {
         _activeCall.value = cur.copy(isMuted = next)
     }
 
+    @Suppress("DEPRECATION")
     fun toggleSpeaker() {
         val svc = serviceRef ?: return
         val cur = _activeCall.value ?: return
@@ -166,6 +167,8 @@ class HyalineInCallService : InCallService() {
         super.onCallRemoved(call)
     }
 
+    @Deprecated("Deprecated in Android API 34")
+    @Suppress("DEPRECATION")
     override fun onCallAudioStateChanged(audioState: CallAudioState?) {
         super.onCallAudioStateChanged(audioState)
         val cur = CallSessionStore.activeCall.value ?: return
@@ -186,6 +189,7 @@ class HyalineInCallService : InCallService() {
         super.onDestroy()
     }
 
+    @Suppress("DEPRECATION")
     private fun syncCallSnapshot(call: Call) {
         val number = call.details.handle?.schemeSpecificPart ?: "Unknown"
         val name = lookupContactName(this, number)
